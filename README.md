@@ -7,7 +7,7 @@ A professional, real-time American Sign Language (ASL) recognition web applicati
 ![React](https://img.shields.io/badge/React-18.2+-61DAFB)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## ✨ Features
+## Features
 
 - **Real-time Sign Recognition**: Detects and recognizes ASL signs using your webcam
 - **Pose Detection**: Uses PoseNet to track body keypoints and hand positions
@@ -19,7 +19,7 @@ A professional, real-time American Sign Language (ASL) recognition web applicati
 - **Educational Guide**: Learn basic ASL signs and hand shapes
 - **High Performance**: Optimized TensorFlow.js model for smooth detection
 
-## 🎯 Recognized Signs
+## Recognized Signs
 
 Currently recognizes:
 
@@ -71,7 +71,7 @@ npm run build
 
 This creates an optimized production build in the `build` folder.
 
-## 📖 How to Use
+## How to Use
 
 1. **Start Camera**: Click "📹 Start Camera" to enable your webcam
 2. **Position Yourself**: Face the camera with good lighting
@@ -80,7 +80,7 @@ This creates an optimized production build in the `build` folder.
 5. **Check History**: Browse past recognized signs in the history panel
 6. **Toggle Theme**: Switch between dark and light modes with the theme button
 
-## 💡 Tips for Best Results
+## Tips for Best Results
 
 ✓ **Lighting**: Ensure bright, even lighting from the front
 ✓ **Distance**: Position yourself 2-3 feet from the camera
@@ -89,7 +89,7 @@ This creates an optimized production build in the `build` folder.
 ✓ **Background**: Use a plain, contrasting background
 ✓ **Clear Gestures**: Make defined, complete sign movements
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 asl_tensorflow/
@@ -114,7 +114,7 @@ asl_tensorflow/
 └── README.md
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React 18.2+
 - **ML Framework**: TensorFlow.js 4.11+
@@ -122,23 +122,7 @@ asl_tensorflow/
 - **Styling**: CSS3 with CSS Variables
 - **Build Tool**: Create React App
 
-## 🎨 Color Palette
-
-### Dark Mode
-
-- Primary Teal: `#1abc9c`
-- Primary Purple: `#9b59b6`
-- Background: `#0f0f1e`
-- Surface: `#1a1a2e`
-
-### Light Mode
-
-- Primary Teal: `#16a085`
-- Primary Purple: `#8e44ad`
-- Background: `#f8f9fa`
-- Surface: `#ffffff`
-
-## 🔐 Privacy & Security
+## Privacy & Security
 
 ✓ **Local Processing**: All AI processing happens in your browser
 ✓ **No Data Storage**: Signs are not stored or transmitted
@@ -146,14 +130,7 @@ asl_tensorflow/
 ✓ **Camera Control**: You have full control over camera permissions
 ✓ **Open Source**: Inspect the code to verify security
 
-## 🚦 Current Limitations
-
-- Recognizes common ASL signs (will be expanded)
-- Best performance with good lighting
-- Requires modern browser with WebGL support
-- May need calibration for different hand sizes
-
-## 📚 ASL Resources
+## ASL Resources
 
 Want to learn more about American Sign Language?
 
@@ -162,44 +139,6 @@ Want to learn more about American Sign Language?
 - [NFSD](https://nfsd.org/) - National Fraternal Society of the Deaf
 - [ASL Connect](https://www.aslconnect.com/) - Online ASL community
 
-## 🤝 Contributing
-
-Contributions are welcome! Areas for improvement:
-
-- Expand sign vocabulary and recognition accuracy
-- Add more pose-based gestures
-- Improve mobile compatibility
-- Add sign language tutorials
-- Performance optimization
-
-## 📝 Future Enhancements
-
-- [ ] Expand sign recognition database
-- [ ] Add finger spelling recognition
-- [ ] Implement sentence structure support
-- [ ] Mobile app version
-- [ ] Voice output for recognized signs
-- [ ] Multi-user support
-- [ ] Sign language lessons and tutorials
-- [ ] Export recognition history
-
-## ⚖️ License
+## License
 
 MIT License - feel free to use this project for personal or commercial purposes.
-
-## 🙏 Acknowledgments
-
-- TensorFlow.js team for amazing ML tools
-- PoseNet developers for pose detection models
-- React community for the excellent framework
-- ASL community for invaluable feedback and guidance
-
-## 📧 Contact & Support
-
-Have questions or suggestions? Feel free to reach out!
-
----
-
-**Built with ❤️ to help people communicate and learn American Sign Language**
-
-🤟 **Keep signing, keep learning!** 🤟
