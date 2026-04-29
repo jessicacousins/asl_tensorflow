@@ -1,144 +1,72 @@
-# 🤟 ASL Recognition - American Sign Language Detection
+# 🤟 Sign — ASL Practice & Real-time Translation
 
-A professional, real-time American Sign Language (ASL) recognition web application built with React and TensorFlow.js. This app uses pose detection to recognize common ASL signs and translate them to text, helping people learn and communicate in sign language.
+A privacy-first web app that recognizes American Sign Language in real time and turns it into text and speech. Built with **Vite + React + TensorFlow.js + MediaPipe Hands**, designed to help hearing colleagues communicate with people who use ASL.
 
-![ASL Recognition](https://img.shields.io/badge/ASL-Recognition-teal)
-![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-v4.11+-blue)
-![React](https://img.shields.io/badge/React-18.2+-61DAFB)
-![License](https://img.shields.io/badge/License-MIT-green)
+Everything runs locally in your browser. Nothing is uploaded.
 
-## Features
+## What it does
 
-- **Real-time Sign Recognition**: Detects and recognizes ASL signs using your webcam
-- **Pose Detection**: Uses PoseNet to track body keypoints and hand positions
-- **Live Visualization**: See skeleton and pose overlays in real-time
-- **Recognition History**: Track all detected signs with confidence scores and timestamps
-- **Dark & Light Mode**: Professional UI with teal and purple color schemes
-- **Responsive Design**: Works seamlessly on desktop and tablet devices
-- **Privacy First**: All processing happens locally in your browser - no data sent to servers
-- **Educational Guide**: Learn basic ASL signs and hand shapes
-- **High Performance**: Optimized TensorFlow.js model for smooth detection
+- **Translate mode** — turns your signs into a live script. Tap **Speak** to read it aloud (Web Speech API), copy it, or have each sign spoken as it's committed so a hearing colleague can follow along in conversation.
+- **Practice mode** — shows you a target sign and scores you when you make and hold it. Pick a starter set, the easy alphabet, the full static alphabet, or phrases.
+- **Learn mode** — searchable library of every sign the model recognises, with handshape descriptions.
 
-## Recognized Signs
+## Recognised signs
 
-Currently recognizes:
+Static handshapes only (no temporal model required):
 
-- **Hello** - Wave hand near shoulder level
-- **Thank You** - Both hands gesture in appreciation
-- **Yes** - Affirmative head nod
-- **Please** - Hand over heart in circular motion
-- **Good** - Thumbs up gesture
-- And more hand gestures!
+- **Letters:** A, B, C, D, E, F, I, L, O, R, U, V, W, Y
+- **Numbers:** 1, 3, 5
+- **Phrases:** Hello, I Love You
 
-## 🚀 Getting Started
+Letters that need motion (J, Z) and ones that look identical from a single frame (M, N, S, T, X) are intentionally excluded so they don't fire false positives.
 
-### Prerequisites
+## Why it actually works now
 
-- Node.js (v14 or higher)
-- npm or yarn
-- A modern web browser with webcam access
-- Good lighting environment
+The previous build used the older `@tensorflow-models/handpose` library and mixed two different landmark conventions in the same file, which is why only "Hello" was firing. SignBridge uses the modern `@mediapipe/tasks-vision` HandLandmarker (21 normalised landmarks per hand), an angle-based finger-extension test that's orientation-independent, and a stability buffer so the script only commits a sign once you've held it.
 
-### Installation
-
-1. **Clone or navigate to the project directory**
-
-   ```bash
-   cd asl_tensorflow
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-
-   ```bash
-   npm start
-   ```
-
-4. **Open your browser**
-   - Navigate to `http://localhost:3000`
-   - Grant camera permissions when prompted
-
-### Build for Production
+## Run it
 
 ```bash
-npm run build
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # production bundle in /dist
+npm run preview  # serve the production build
 ```
 
-This creates an optimized production build in the `build` folder.
+You'll need a modern browser with WebGL and webcam access (Chrome, Edge, Safari, Firefox all work). The hand-tracking model (~6 MB) is fetched once from Google's CDN on first launch.
 
-## How to Use
-
-1. **Start Camera**: Click "📹 Start Camera" to enable your webcam
-2. **Position Yourself**: Face the camera with good lighting
-3. **Make Signs**: Perform ASL signs in front of the camera
-4. **View Recognition**: See recognized signs appear in real-time with confidence scores
-5. **Check History**: Browse past recognized signs in the history panel
-6. **Toggle Theme**: Switch between dark and light modes with the theme button
-
-## Tips for Best Results
-
-✓ **Lighting**: Ensure bright, even lighting from the front
-✓ **Distance**: Position yourself 2-3 feet from the camera
-✓ **Movement**: Make slow, deliberate hand movements
-✓ **Position**: Keep hands above shoulder height
-✓ **Background**: Use a plain, contrasting background
-✓ **Clear Gestures**: Make defined, complete sign movements
-
-## Project Structure
+## Project layout
 
 ```
 asl_tensorflow/
-├── public/
-│   └── index.html
+├── index.html               # Vite entry
+├── vite.config.js
 ├── src/
-│   ├── components/
-│   │   ├── Camera.js           # Pose detection & sign recognition
-│   │   ├── Camera.css
-│   │   ├── SignDisplay.js      # Display recognized signs
-│   │   ├── SignDisplay.css
-│   │   ├── ThemeToggle.js      # Dark/light mode toggle
-│   │   ├── ThemeToggle.css
-│   │   ├── Info.js             # Educational guide
-│   │   └── Info.css
-│   ├── App.js                  # Main app component
-│   ├── App.css                 # Global styles
-│   ├── index.js                # React entry point
-│   └── index.css
-├── package.json
-├── .gitignore
-└── README.md
+│   ├── main.jsx             # React mount
+│   ├── App.jsx              # mode router + frame pipeline
+│   ├── App.css / index.css  # design tokens & layout
+│   ├── hooks/
+│   │   ├── useHandTracker.js  # MediaPipe HandLandmarker lifecycle
+│   │   └── useSpeech.js       # Web Speech API wrapper
+│   ├── lib/
+│   │   ├── landmarks.js       # MediaPipe landmark indices + bone connections
+│   │   ├── aslClassifier.js   # geometric ASL classifier
+│   │   ├── stability.js       # debounce/commit buffer
+│   │   └── signLibrary.js     # sign metadata for Practice & Learn
+│   └── components/
+│       ├── Header.jsx
+│       ├── CameraView.jsx     # video, skeleton overlay, controls
+│       ├── TranslateMode.jsx  # live script + speech
+│       ├── PracticeMode.jsx   # target sign + scoring
+│       └── LearnMode.jsx      # searchable library
 ```
 
-## Tech Stack
+## Privacy
 
-- **Frontend**: React 18.2+
-- **ML Framework**: TensorFlow.js 4.11+
-- **Pose Detection**: PoseNet 2.2+
-- **Styling**: CSS3 with CSS Variables
-- **Build Tool**: Create React App
-
-## Privacy & Security
-
-✓ **Local Processing**: All AI processing happens in your browser
-✓ **No Data Storage**: Signs are not stored or transmitted
-✓ **No Tracking**: No analytics or tracking systems
-✓ **Camera Control**: You have full control over camera permissions
-✓ **Open Source**: Inspect the code to verify security
-
-## ASL Resources
-
-Want to learn more about American Sign Language?
-
-- [ASL University](https://www.lifeprint.com/) - Free ASL dictionary and lessons
-- [Gallaudet University](https://www.gallaudet.edu/) - Leading deaf university
-- [NFSD](https://nfsd.org/) - National Fraternal Society of the Deaf
-- [ASL Connect](https://www.aslconnect.com/) - Online ASL community
+- Model inference and webcam frames stay on your device.
+- The only network call is the one-time download of the MediaPipe model and WASM runtime from Google's public CDN.
+- No analytics, no telemetry, no accounts.
 
 ## License
 
-MIT License - feel free to use this project for personal or commercial purposes.
+MIT.

@@ -1,0 +1,157 @@
+.practice-panel {
+  transition: border-color 200ms ease;
+}
+
+.practice-panel.correct {
+  border-color: color-mix(in srgb, var(--success) 60%, transparent);
+}
+
+.practice-panel.hold {
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
+}
+
+.score-block {
+  display: flex;
+  gap: 16px;
+}
+
+.score-block > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.score-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.score-block strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.set-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.set-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.set-chip:hover {
+  color: var(--text);
+}
+
+.set-chip.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.target-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition:
+    background 240ms ease,
+    border-color 240ms ease,
+    transform 240ms ease;
+}
+
+.target-card.target-correct {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--success) 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.target-card.target-hold {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+
+.target-emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.target-body {
+  min-width: 0;
+}
+
+.target-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.target-sign {
+  font-size: 36px;
+  letter-spacing: -0.02em;
+  margin: 2px 0 6px;
+}
+
+.target-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.feedback {
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-strong);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.feedback.ok {
+  background: var(--success);
+  color: #06281a;
+  border-color: transparent;
+}
+
+.feedback.hold {
+  background: var(--warning);
+  color: #2b1d04;
+  border-color: transparent;
+}
+
+.feedback.off {
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.practice-controls {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 540px) {
+  .target-card {
+    grid-template-columns: auto 1fr;
+  }
+  .target-card .feedback {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
