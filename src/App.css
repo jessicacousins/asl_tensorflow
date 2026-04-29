@@ -1,0 +1,351 @@
+/* Root Variables */
+:root {
+  --teal-primary: #1abc9c;
+  --teal-dark: #16a085;
+  --purple-primary: #9b59b6;
+  --purple-dark: #8e44ad;
+  --purple-light: #af7ac5;
+
+  /* Dark Mode */
+  --dark-bg: #0f0f1e;
+  --dark-surface: #1a1a2e;
+  --dark-surface-hover: #252541;
+  --dark-text: #ffffff;
+  --dark-text-secondary: #b0b0c0;
+  --dark-border: #2d2d44;
+
+  /* Light Mode */
+  --light-bg: #f8f9fa;
+  --light-surface: #ffffff;
+  --light-surface-hover: #f0f0f5;
+  --light-text: #1a1a2e;
+  --light-text-secondary: #6b6b7d;
+  --light-border: #e0e0e8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+/* Dark Theme */
+.app-dark {
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+.app-dark body {
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+/* Light Theme */
+.app-light {
+  background-color: var(--light-bg);
+  color: var(--light-text);
+}
+
+.app-light body {
+  background-color: var(--light-bg);
+  color: var(--light-text);
+}
+
+/* Main App */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease;
+}
+
+.app-header {
+  padding: 2rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid;
+  border-color: var(--teal-primary);
+}
+
+.app-dark .app-header {
+  background-color: var(--dark-surface);
+  border-color: var(--teal-primary);
+}
+
+.app-light .app-header {
+  background-color: var(--light-surface);
+  border-color: var(--teal-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  flex: 1;
+}
+
+.app-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(
+    135deg,
+    var(--teal-primary),
+    var(--purple-primary)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+}
+
+.app-subtitle {
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
+
+.app-dark .app-subtitle {
+  color: var(--dark-text-secondary);
+}
+
+.app-light .app-subtitle {
+  color: var(--light-text-secondary);
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  padding: 2rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.container {
+  width: 100%;
+  max-width: 1400px;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .content-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.camera-section,
+.display-section {
+  display: flex;
+  justify-content: center;
+}
+
+/* Surfaces/Cards */
+.surface {
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.app-dark .surface {
+  background-color: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+}
+
+.app-light .surface {
+  background-color: var(--light-surface);
+  border: 1px solid var(--light-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.app-dark .surface:hover {
+  background-color: var(--dark-surface-hover);
+  border-color: var(--teal-primary);
+}
+
+.app-light .surface:hover {
+  background-color: var(--light-surface-hover);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Buttons */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--teal-primary), var(--teal-dark));
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(26, 188, 156, 0.3);
+}
+
+.btn-secondary {
+  background: linear-gradient(
+    135deg,
+    var(--purple-primary),
+    var(--purple-dark)
+  );
+  color: white;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(155, 89, 182, 0.3);
+}
+
+.btn-toggle {
+  background: none;
+  border: 2px solid;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+}
+
+.app-dark .btn-toggle {
+  border-color: var(--teal-primary);
+  color: var(--teal-primary);
+}
+
+.app-light .btn-toggle {
+  border-color: var(--purple-primary);
+  color: var(--purple-primary);
+}
+
+.btn-toggle:hover {
+  transform: scale(1.05);
+}
+
+/* Text Styles */
+.text-muted {
+  opacity: 0.7;
+}
+
+.app-dark .text-muted {
+  color: var(--dark-text-secondary);
+}
+
+.app-light .text-muted {
+  color: var(--light-text-secondary);
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 1.5rem;
+  border-top: 1px solid;
+  font-size: 0.9rem;
+}
+
+.app-dark .app-footer {
+  background-color: var(--dark-surface);
+  border-color: var(--dark-border);
+  color: var(--dark-text-secondary);
+}
+
+.app-light .app-footer {
+  background-color: var(--light-surface);
+  border-color: var(--light-border);
+  color: var(--light-text-secondary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(26, 188, 156, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(26, 188, 156, 0.6);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+.glow {
+  animation: glow 2s infinite;
+}
+
+.fadeIn {
+  animation: fadeIn 0.5s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-dark ::-webkit-scrollbar-track {
+  background: var(--dark-surface);
+}
+
+.app-dark ::-webkit-scrollbar-thumb {
+  background: var(--teal-primary);
+  border-radius: 5px;
+}
+
+.app-dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--teal-dark);
+}
+
+.app-light ::-webkit-scrollbar-track {
+  background: var(--light-bg);
+}
+
+.app-light ::-webkit-scrollbar-thumb {
+  background: var(--purple-primary);
+  border-radius: 5px;
+}
+
+.app-light ::-webkit-scrollbar-thumb:hover {
+  background: var(--purple-dark);
+}

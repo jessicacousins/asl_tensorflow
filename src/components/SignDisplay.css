@@ -1,0 +1,361 @@
+.display-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 650px;
+  width: 100%;
+}
+
+.display-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.display-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.listening-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  background: rgba(26, 188, 156, 0.15);
+}
+
+.indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #7f8c8d;
+  transition: all 0.3s ease;
+}
+
+.indicator-dot.listening {
+  background-color: #1abc9c;
+  animation: pulse 1s infinite;
+}
+
+.indicator-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.app-dark .listening-indicator {
+  background: rgba(26, 188, 156, 0.15);
+}
+
+.app-light .listening-indicator {
+  background: rgba(26, 188, 156, 0.1);
+}
+
+/* Sign Display */
+.sign-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.app-dark .sign-display {
+  background: linear-gradient(
+    135deg,
+    rgba(26, 188, 156, 0.1),
+    rgba(155, 89, 182, 0.1)
+  );
+  border: 1px solid rgba(26, 188, 156, 0.2);
+}
+
+.app-light .sign-display {
+  background: linear-gradient(
+    135deg,
+    rgba(26, 188, 156, 0.05),
+    rgba(155, 89, 182, 0.05)
+  );
+  border: 1px solid rgba(26, 188, 156, 0.2);
+}
+
+.sign-recognized {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
+.sign-emoji {
+  font-size: 4rem;
+  animation: bounce 1s ease-in-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.recognized-sign {
+  font-size: 3rem;
+  font-weight: 700;
+  background: linear-gradient(
+    135deg,
+    var(--teal-primary),
+    var(--purple-primary)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(127, 140, 141, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: 300px;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--teal-primary),
+    var(--purple-primary)
+  );
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.confidence-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.app-dark .confidence-text {
+  color: var(--teal-primary);
+}
+
+.app-light .confidence-text {
+  color: var(--teal-dark);
+}
+
+.sign-description {
+  font-size: 0.95rem;
+  max-width: 400px;
+  opacity: 0.8;
+  margin: 0.5rem 0 0 0;
+}
+
+.app-dark .sign-description {
+  color: var(--dark-text-secondary);
+}
+
+.app-light .sign-description {
+  color: var(--light-text-secondary);
+}
+
+.no-sign-detected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.no-sign-emoji {
+  font-size: 3.5rem;
+  animation: pulse 2s infinite;
+}
+
+.no-sign-detected p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* History Section */
+.history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.app-dark .history-section {
+  background: rgba(26, 188, 156, 0.05);
+  border: 1px solid rgba(26, 188, 156, 0.1);
+}
+
+.app-light .history-section {
+  background: rgba(26, 188, 156, 0.03);
+  border: 1px solid rgba(26, 188, 156, 0.15);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.btn-clear {
+  background: none;
+  border: 1px solid;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.app-dark .btn-clear {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.app-dark .btn-clear:hover {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.app-light .btn-clear {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.app-light .btn-clear:hover {
+  background: rgba(192, 57, 43, 0.1);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.app-dark .history-item {
+  background: rgba(155, 89, 182, 0.1);
+  border: 1px solid rgba(155, 89, 182, 0.15);
+}
+
+.app-light .history-item {
+  background: rgba(155, 89, 182, 0.08);
+  border: 1px solid rgba(155, 89, 182, 0.2);
+}
+
+.history-sign {
+  font-weight: 700;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.app-dark .history-sign {
+  color: var(--teal-primary);
+}
+
+.app-light .history-sign {
+  color: var(--teal-dark);
+}
+
+.history-details {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.history-confidence {
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+.app-dark .history-confidence {
+  background: rgba(26, 188, 156, 0.2);
+  color: #1abc9c;
+}
+
+.app-light .history-confidence {
+  background: rgba(26, 188, 156, 0.15);
+  color: var(--teal-dark);
+}
+
+.history-time {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Tips Section */
+.tips-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(155, 89, 182, 0.05);
+  border: 1px solid rgba(155, 89, 182, 0.1);
+}
+
+.tips-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.tips-section ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tips-section li {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.app-dark .tips-section h4,
+.app-dark .tips-section li {
+  color: var(--dark-text);
+}
+
+.app-light .tips-section h4,
+.app-light .tips-section li {
+  color: var(--light-text);
+}
