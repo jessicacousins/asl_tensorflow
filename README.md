@@ -1,4 +1,4 @@
-# JC-Signs - ASL Practice & Real-Time Translation
+# JC-Signs - ASL Practice & Real-Time Translation (Machine Learning)
 
 A privacy-first web app that recognizes American Sign Language in real time and turns it into text and speech. Built with **Vite + React + TensorFlow.js + MediaPipe hand, face, and body tracking**, designed to help hearing colleagues communicate with people who use ASL.
 
