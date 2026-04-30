@@ -1,0 +1,183 @@
+.sign-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.sign-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sign-icon-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.sign-icon-md {
+  width: 32px;
+  height: 32px;
+}
+
+.sign-icon-lg {
+  width: 62px;
+  height: 62px;
+}
+
+.icon-bg {
+  fill: color-mix(in srgb, var(--accent-alt) 14%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 42%, transparent);
+  stroke-width: 1.5;
+}
+
+.icon-line,
+.icon-sweep {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-sweep {
+  stroke-width: 2.5;
+  opacity: 0.65;
+}
+
+.icon-dot,
+.icon-fill {
+  fill: currentColor;
+}
+
+.icon-letter {
+  fill: currentColor;
+  font: 700 24px var(--font-sans);
+}
+
+.jc-logo-bg {
+  fill: url("#jcLogoGradient");
+}
+
+.jc-logo-text {
+  fill: #fff;
+  font: 800 22px var(--font-sans);
+  letter-spacing: -0.06em;
+}
+
+.jc-logo-ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 38 18;
+  transform-origin: 32px 32px;
+  animation: jcLogoSpin 6s linear infinite;
+}
+
+.brand-mark .sign-icon,
+.mode-tab.is-active .sign-icon,
+.btn-primary .sign-icon {
+  color: #fff;
+}
+
+.theme-toggle .sign-icon,
+.btn .sign-icon {
+  color: currentColor;
+}
+
+.icon-pulse {
+  transform-origin: 32px 32px;
+  animation: iconPulse 2.4s ease-in-out infinite;
+}
+
+.icon-wave {
+  animation: iconWave 2.6s ease-in-out infinite;
+}
+
+.icon-swing {
+  transform-origin: 32px 32px;
+  animation: iconSwing 2.8s ease-in-out infinite;
+}
+
+.icon-float-left {
+  animation: iconFloatLeft 2.6s ease-in-out infinite;
+}
+
+.icon-float-right {
+  animation: iconFloatRight 2.6s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes iconWave {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes iconSwing {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes iconFloatLeft {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes iconFloatRight {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes jcLogoSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-pulse,
+  .icon-wave,
+  .icon-swing,
+  .icon-float-left,
+  .icon-float-right {
+    animation: none;
+  }
+
+  .jc-logo-ring {
+    animation: none;
+  }
+}

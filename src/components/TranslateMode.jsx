@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import "./TranslateMode.css";
 import { useSpeech } from "../hooks/useSpeech.js";
+import SignIcon from "./SignIcon.jsx";
 
-const SPACE_GAP_MS = 1500; // a pause this long inserts a space between letters
+const SPACE_GAP_MS = 1500;
 
 export default function TranslateMode({ committedSign, livePrediction, cameraOn }) {
-  const [tokens, setTokens] = useState([]); // ordered list of committed signs
+  const [tokens, setTokens] = useState([]);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const lastCommitAtRef = useRef(0);
   const { supported: speechSupported, speak, stop, speaking } = useSpeech();
 
-  // Append every newly-committed sign to the script. A long pause between
-  // commits is treated as a word boundary so multi-letter words read
-  // naturally when spoken.
   useEffect(() => {
     if (!committedSign) return;
     const now = committedSign.at;
@@ -31,8 +29,6 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
 
   useEffect(() => {
     if (!autoSpeak || !committedSign) return;
-    // Speak the latest token only — speaking the whole script every time
-    // would be incoherent.
     speak(committedSign.sign);
   }, [committedSign, autoSpeak, speak]);
 
@@ -65,13 +61,13 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
         <div>
           <h2>Live script</h2>
           <p className="panel-sub">
-            What you sign turns into text — share it, copy it, or have it read
+            What you sign turns into text - share it, copy it, or have it read
             aloud so a hearing colleague can follow along.
           </p>
         </div>
         <div className="now-pill">
           <span className="now-label">Now</span>
-          <strong>{livePrediction ? livePrediction.label : cameraOn ? "—" : "Camera off"}</strong>
+          <strong>{livePrediction ? livePrediction.label : cameraOn ? "-" : "Camera off"}</strong>
         </div>
       </div>
 
@@ -81,7 +77,7 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
         ) : (
           <p className="script-empty">
             {cameraOn
-              ? "Start signing — committed signs will appear here."
+              ? "Start signing - committed signs will appear here."
               : "Turn on the camera to begin translating."}
           </p>
         )}
@@ -99,7 +95,8 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
               : "Your browser doesn't support speech synthesis"
           }
         >
-          🔊 Speak script
+          <SignIcon type="speak" size="sm" />
+          Speak script
         </button>
         <button
           type="button"
@@ -115,7 +112,8 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
           onClick={handleBackspace}
           disabled={!tokens.length}
         >
-          ⌫ Backspace
+          <SignIcon type="backspace" size="sm" />
+          Backspace
         </button>
         <button
           type="button"
@@ -167,12 +165,9 @@ export default function TranslateMode({ committedSign, livePrediction, cameraOn 
   );
 }
 
-// Letter tokens like "A", "B" should render glued together (fingerspelling),
-// while phrase tokens like "Hello" or "I Love You" should sit between spaces
-// so the result reads naturally.
 function formatScript(tokens) {
   let out = "";
-  for (let i = 0; i < tokens.length; i++) {
+  for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i];
     if (t === " ") {
       if (out && !out.endsWith(" ")) out += " ";

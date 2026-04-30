@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.0.0",
   "type": "module",
-  "description": "SignBridge — Learn ASL and translate signs to text & speech in real time using TensorFlow.js and MediaPipe.",
+  "description": "JC-Signs - learn ASL and translate signs to text and speech in real time using TensorFlow.js and MediaPipe.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -145,6 +145,24 @@ const closedFist = (f) =>
 const twoUp = (f) =>
   fingers(f, { thumb: "down", index: "up", middle: "up", ring: "down", pinky: "down" });
 
+const POSE = {
+  NOSE: 0,
+  LEFT_SHOULDER: 11,
+  RIGHT_SHOULDER: 12,
+  LEFT_HIP: 23,
+  RIGHT_HIP: 24,
+};
+
+const FACE = {
+  FOREHEAD: 10,
+  NOSE: 1,
+  UPPER_LIP: 13,
+  LOWER_LIP: 14,
+  CHIN: 152,
+  LEFT_CHEEK: 234,
+  RIGHT_CHEEK: 454,
+};
+
 const SCORERS = {
   A: (f) =>
     closedFist(f) *
@@ -267,6 +285,9 @@ const SCORERS = {
   No: (f) =>
     fingers(f, { thumb: "up", index: "up", middle: "up", ring: "down", pinky: "down" }) *
     lessThan(f.thumbIndex, 0.8, 0.16),
+  Point: (f) =>
+    fingers(f, { index: "up", middle: "down", ring: "down", pinky: "down" }) *
+    greaterThan(f.indexAboveMcp, 0.45, 0.14),
   "I Love You": (f) =>
     fingers(f, { thumb: "up", index: "up", middle: "down", ring: "down", pinky: "up" }) *
     greaterThan(f.thumbIndex, 0.72, 0.14) *
@@ -305,10 +326,17 @@ export const LABELS = {
   "Thank You": "Thank You",
   Please: "Please",
   Home: "Home",
+  Food: "Food",
+  Water: "Water",
+  Drink: "Drink",
+  Bathroom: "Bathroom",
   Yes: "Yes",
   No: "No",
   Unsure: "Unsure",
   Help: "Help",
+  Me: "Me",
+  You: "You",
+  Need: "Need",
   "Please Help Me": "Please Help Me",
   More: "More",
   "I Love You": "I Love You",
@@ -320,8 +348,15 @@ const PHRASE_IDS = new Set([
   "Thank You",
   "Please",
   "Home",
+  "Food",
+  "Water",
+  "Drink",
+  "Bathroom",
   "No",
   "Unsure",
+  "Me",
+  "You",
+  "Need",
   "I Love You",
 ]);
 
@@ -332,13 +367,128 @@ const MARGIN = 0.08;
 let motionHistory = [];
 let lastFrameAt = 0;
 
-function rememberMotion(handsLandmarks, staticSign) {
+const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: ((a.z ?? 0) + (b.z ?? 0)) / 2 });
+const centroid = (points) => ({
+  x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+  y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+  z: points.reduce((sum, p) => sum + (p.z ?? 0), 0) / points.length,
+});
+
+function faceScale(face) {
+  if (!face?.length) return null;
+  const xs = face.map((p) => p.x);
+  const ys = face.map((p) => p.y);
+  return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 0.08);
+}
+
+function bodyScale(pose, face) {
+  if (pose?.[POSE.LEFT_SHOULDER] && pose?.[POSE.RIGHT_SHOULDER]) {
+    return Math.max(dist(pose[POSE.LEFT_SHOULDER], pose[POSE.RIGHT_SHOULDER]), 0.12);
+  }
+  return faceScale(face) ?? 0.18;
+}
+
+function getContext(context = {}) {
+  const face = context.faceLandmarks?.[0] ?? null;
+  const pose = context.poseLandmarks?.[0] ?? null;
+  const scale = bodyScale(pose, face);
+
+  const mouth =
+    face?.[FACE.UPPER_LIP] && face?.[FACE.LOWER_LIP]
+      ? midpoint(face[FACE.UPPER_LIP], face[FACE.LOWER_LIP])
+      : pose?.[POSE.NOSE] ?? null;
+  const chin = face?.[FACE.CHIN] ?? mouth;
+  const forehead = face?.[FACE.FOREHEAD] ?? null;
+  const cheek =
+    face?.[FACE.LEFT_CHEEK] && face?.[FACE.RIGHT_CHEEK]
+      ? midpoint(face[FACE.LEFT_CHEEK], face[FACE.RIGHT_CHEEK])
+      : mouth;
+  const shoulders =
+    pose?.[POSE.LEFT_SHOULDER] && pose?.[POSE.RIGHT_SHOULDER]
+      ? midpoint(pose[POSE.LEFT_SHOULDER], pose[POSE.RIGHT_SHOULDER])
+      : null;
+  const hips =
+    pose?.[POSE.LEFT_HIP] && pose?.[POSE.RIGHT_HIP]
+      ? midpoint(pose[POSE.LEFT_HIP], pose[POSE.RIGHT_HIP])
+      : null;
+  const chest = shoulders && hips ? midpoint(shoulders, hips) : shoulders;
+
+  return { face, pose, scale, mouth, chin, forehead, cheek, shoulders, chest };
+}
+
+function near(a, b, radius, scale) {
+  if (!a || !b) return 0;
+  return lessThan(dist(a, b) / scale, radius, radius * 0.35);
+}
+
+function handFocus(lm) {
+  return centroid([lm[THUMB_TIP], lm[INDEX_TIP], lm[MIDDLE_TIP], lm[WRIST]]);
+}
+
+function classifyContextualPhrase(handsLandmarks, context) {
+  if (!handsLandmarks?.length) return null;
+  const ctx = getContext(context);
+  const primary = handsLandmarks[0];
+  const features = getFeatures(primary);
+  const focus = handFocus(primary);
+
+  const atMouth = Math.max(near(focus, ctx.mouth, 1.0, ctx.scale), near(primary[THUMB_TIP], ctx.mouth, 0.85, ctx.scale));
+  const atChin = near(focus, ctx.chin, 1.0, ctx.scale);
+  const atCheek = near(focus, ctx.cheek, 1.05, ctx.scale);
+  const atForehead = near(focus, ctx.forehead, 1.1, ctx.scale);
+  const atChest = Math.max(near(primary[WRIST], ctx.chest, 1.15, ctx.scale), near(focus, ctx.chest, 1.35, ctx.scale));
+
+  if (SCORERS.O(features) > 0.74 && atMouth > 0.72) {
+    return { sign: "Food", label: LABELS.Food, confidence: 0.88 };
+  }
+
+  if (SCORERS.O(features) > 0.74 && atCheek > 0.72 && atCheek > atMouth + 0.08) {
+    return { sign: "Home", label: LABELS.Home, confidence: 0.9 };
+  }
+
+  if (SCORERS.W(features) > 0.72 && Math.max(atMouth, atChin) > 0.65) {
+    return { sign: "Water", label: LABELS.Water, confidence: 0.88 };
+  }
+
+  if (SCORERS.C(features) > 0.68 && atMouth > 0.68) {
+    return { sign: "Drink", label: LABELS.Drink, confidence: 0.86 };
+  }
+
+  if (openPalm(features) > 0.82 && Math.max(atMouth, atChin) > 0.68) {
+    return { sign: "Thank You", label: LABELS["Thank You"], confidence: 0.88 };
+  }
+
+  if (openPalm(features) > 0.82 && atChest > 0.72) {
+    return { sign: "Please", label: LABELS.Please, confidence: 0.86 };
+  }
+
+  if (SCORERS.Point(features) > 0.72 && atChest > 0.68) {
+    return { sign: "Me", label: LABELS.Me, confidence: 0.88 };
+  }
+
+  if (SCORERS.Point(features) > 0.72 && ctx.chest && dist(focus, ctx.chest) / ctx.scale > 1.35) {
+    return { sign: "You", label: LABELS.You, confidence: 0.84 };
+  }
+
+  if (SCORERS.X(features) > 0.68 && atChest > 0.55) {
+    return { sign: "Need", label: LABELS.Need, confidence: 0.84 };
+  }
+
+  if (SCORERS.T(features) > 0.7 && Math.max(atChest, atForehead) > 0.45) {
+    return { sign: "Bathroom", label: LABELS.Bathroom, confidence: 0.82 };
+  }
+
+  return null;
+}
+
+function rememberMotion(handsLandmarks, staticSign, context) {
   const now = performance.now();
   if (!handsLandmarks?.length || now - lastFrameAt > 600) motionHistory = [];
   lastFrameAt = now;
 
   const hand = handsLandmarks?.[0];
   if (!hand) return;
+  const ctx = getContext(context);
   motionHistory.push({
     at: now,
     staticSign,
@@ -346,6 +496,11 @@ function rememberMotion(handsLandmarks, staticSign) {
     index: hand[INDEX_TIP],
     thumb: hand[THUMB_TIP],
     pinky: hand[PINKY_TIP],
+    context: {
+      scale: ctx.scale,
+      mouth: ctx.mouth,
+      chest: ctx.chest,
+    },
   });
   motionHistory = motionHistory.filter((p) => now - p.at <= 900).slice(-24);
 }
@@ -433,6 +588,7 @@ function bestOneHand(landmarks, { phrases = true } = {}) {
   let runnerUp = 0;
 
   for (const [sign, scorer] of Object.entries(SCORERS)) {
+    if (sign === "Point") continue;
     if (!phrases && !LETTERS.has(sign)) continue;
 
     const score = scorer(features);
@@ -505,22 +661,28 @@ function classifyTwoHand(handsLandmarks) {
   return null;
 }
 
-export function classifyFrame(handsLandmarks) {
+export function classifyFrame(handsLandmarks, context = {}) {
   if (!handsLandmarks || handsLandmarks.length === 0) {
     rememberMotion([], null);
     return null;
   }
 
+  const contextual = classifyContextualPhrase(handsLandmarks, context);
+  if (contextual) {
+    rememberMotion(handsLandmarks, contextual.sign, context);
+    return contextual;
+  }
+
   if (handsLandmarks.length >= 2) {
     const two = classifyTwoHand(handsLandmarks);
     if (two) {
-      rememberMotion(handsLandmarks, two.sign);
+      rememberMotion(handsLandmarks, two.sign, context);
       return two;
     }
   }
 
   const staticPrediction = classifyHand(handsLandmarks[0]);
-  rememberMotion(handsLandmarks, staticPrediction?.sign ?? null);
+  rememberMotion(handsLandmarks, staticPrediction?.sign ?? null, context);
   const motionPrediction = classifyMotion();
   return motionPrediction ?? staticPrediction;
 }

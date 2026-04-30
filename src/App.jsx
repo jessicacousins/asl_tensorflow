@@ -9,35 +9,30 @@ import { classifyFrame, resetClassifierState } from "./lib/aslClassifier.js";
 import { createStabilityBuffer } from "./lib/stability.js";
 
 const MODES = [
-  { id: "translate", label: "Translate", icon: "💬" },
-  { id: "practice", label: "Practice", icon: "🎯" },
-  { id: "learn", label: "Learn", icon: "📚" },
+  { id: "translate", label: "Translate" },
+  { id: "practice", label: "Practice" },
+  { id: "learn", label: "Learn" },
 ];
 
 export default function App() {
   const [theme, setTheme] = useState(
-    () => localStorage.getItem("signbridge:theme") ?? "dark",
+    () => localStorage.getItem("jc-signs:theme") ?? "dark",
   );
   const [mode, setMode] = useState("translate");
   const [cameraOn, setCameraOn] = useState(false);
-
-  // The "live" prediction is whatever the classifier saw in the last frame —
-  // it flickers every frame, so it's only used for the on-screen badge and
-  // for Practice mode's instant feedback. The "committed" stream goes through
-  // the stability buffer and is what feeds the script.
   const [livePrediction, setLivePrediction] = useState(null);
   const [committedSign, setCommittedSign] = useState(null);
   const [handCount, setHandCount] = useState(0);
+  const [faceCount, setFaceCount] = useState(0);
+  const [poseCount, setPoseCount] = useState(0);
 
   const stabilityRef = useRef(createStabilityBuffer());
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("signbridge:theme", theme);
+    localStorage.setItem("jc-signs:theme", theme);
   }, [theme]);
 
-  // Reset the stability buffer whenever we toggle the camera or switch
-  // modes — old detections from a different context aren't useful.
   useEffect(() => {
     stabilityRef.current.reset();
     resetClassifierState();
@@ -47,7 +42,11 @@ export default function App() {
 
   const handleFrame = useCallback((result) => {
     const hands = result?.landmarks ?? [];
+    const faces = result?.faceLandmarks ?? [];
+    const poses = result?.poseLandmarks ?? [];
     setHandCount(hands.length);
+    setFaceCount(faces.length);
+    setPoseCount(poses.length);
 
     if (hands.length === 0) {
       setLivePrediction(null);
@@ -56,17 +55,17 @@ export default function App() {
       return;
     }
 
-    // classifyFrame checks two-handed signs (Heart, More) when both hands
-    // are visible, and falls back to the first hand for fingerspelling.
-    const prediction = classifyFrame(hands);
+    const prediction = classifyFrame(hands, {
+      faceLandmarks: faces,
+      poseLandmarks: poses,
+    });
     setLivePrediction(prediction);
 
     const committed = stabilityRef.current.tick(prediction?.sign ?? null);
     if (committed) setCommittedSign({ sign: committed, at: Date.now() });
   }, []);
 
-  const toggleTheme = () =>
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   const cameraSlot = useMemo(
     () => (
@@ -76,9 +75,11 @@ export default function App() {
         onFrame={handleFrame}
         livePrediction={livePrediction}
         handCount={handCount}
+        faceCount={faceCount}
+        poseCount={poseCount}
       />
     ),
-    [cameraOn, handleFrame, livePrediction, handCount],
+    [cameraOn, handleFrame, livePrediction, handCount, faceCount, poseCount],
   );
 
   return (
@@ -115,9 +116,9 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        <span>SignBridge · TensorFlow.js + MediaPipe Hands</span>
+        <span>JC-Signs - TensorFlow.js + MediaPipe Holistic Tracking</span>
         <span className="dot" />
-        <span>Built so colleagues can communicate.</span>
+        <span>Built for communication</span>
       </footer>
     </div>
   );

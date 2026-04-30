@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./CameraView.css";
 import { useHandTracker } from "../hooks/useHandTracker.js";
 import { HAND_CONNECTIONS } from "../lib/landmarks.js";
+import SignIcon from "./SignIcon.jsx";
 
 export default function CameraView({
   enabled,
@@ -9,6 +10,8 @@ export default function CameraView({
   onFrame,
   livePrediction,
   handCount,
+  faceCount,
+  poseCount,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -55,7 +58,7 @@ export default function CameraView({
         if (!cancelled) {
           setStreamError(
             err?.name === "NotAllowedError"
-              ? "Camera permission was denied. Allow access in your browser settings to use SignBridge."
+              ? "Camera permission was denied. Allow access in your browser settings to use JC-Signs."
               : "We couldn't access your camera. Make sure no other app is using it.",
           );
           onToggle(false);
@@ -72,7 +75,7 @@ export default function CameraView({
   // the parent's frame handler in the same tick.
   const handleResult = useCallback(
     (result) => {
-      drawHands(canvasRef.current, videoRef.current, result?.landmarks ?? []);
+      drawTracking(canvasRef.current, videoRef.current, result);
       onFrame?.(result);
     },
     [onFrame],
@@ -88,7 +91,7 @@ export default function CameraView({
   const errorMessage =
     streamError ||
     (status === "error"
-      ? "Hand-tracking model failed to load. Check your internet connection and reload."
+      ? "Tracking models failed to load. Check your internet connection and reload."
       : null);
 
   return (
@@ -101,8 +104,10 @@ export default function CameraView({
             {enabled ? (loading ? "Loading model" : "Live") : "Off"}
           </span>
         </div>
-        <div className="hand-count" title="Hands detected this frame">
-          {handCount} {handCount === 1 ? "hand" : "hands"}
+        <div className="tracking-counts" title="Tracking signals detected this frame">
+          <span>{handCount} {handCount === 1 ? "hand" : "hands"}</span>
+          <span>{faceCount} {faceCount === 1 ? "face" : "faces"}</span>
+          <span>{poseCount} {poseCount === 1 ? "pose" : "poses"}</span>
         </div>
       </div>
 
@@ -118,7 +123,9 @@ export default function CameraView({
 
         {!enabled && (
           <div className="camera-placeholder">
-            <span className="placeholder-icon">📷</span>
+            <span className="placeholder-icon">
+              <SignIcon type="camera" size="lg" />
+            </span>
             <h3>Camera is off</h3>
             <p>
               Click <strong>Start camera</strong> to begin. Everything runs
@@ -130,7 +137,7 @@ export default function CameraView({
         {loading && (
           <div className="camera-overlay">
             <div className="spinner" aria-hidden="true" />
-            <p>Loading hand-tracking model…</p>
+            <p>Loading hand, face, and body tracking models...</p>
             <p className="overlay-hint">Only happens once per session.</p>
           </div>
         )}
@@ -172,8 +179,8 @@ export default function CameraView({
         )}
         <p className="camera-hint">
           {enabled
-            ? "Hold each sign for about a second so it gets committed to the script."
-            : "Tip: face an evenly lit wall and keep your hand fully in frame."}
+            ? "Keep your face, torso, and hands in frame so location-based signs can be read."
+            : "Tip: face an evenly lit wall and keep your upper body and hands in frame."}
         </p>
       </div>
     </div>
@@ -182,7 +189,20 @@ export default function CameraView({
 
 // ---- canvas drawing -----------------------------------------------------
 
-function drawHands(canvas, video, hands) {
+const POSE_CONNECTIONS = [
+  [11, 12],
+  [11, 13],
+  [13, 15],
+  [12, 14],
+  [14, 16],
+  [11, 23],
+  [12, 24],
+  [23, 24],
+];
+
+const FACE_ANCHORS = [1, 10, 13, 14, 33, 61, 152, 263, 291];
+
+function drawTracking(canvas, video, result) {
   if (!canvas || !video) return;
   const w = video.videoWidth;
   const h = video.videoHeight;
@@ -192,9 +212,16 @@ function drawHands(canvas, video, hands) {
 
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, w, h);
+
+  drawPose(ctx, w, h, result?.poseLandmarks?.[0]);
+  drawFaceAnchors(ctx, w, h, result?.faceLandmarks?.[0]);
+  drawHands(ctx, w, h, result?.landmarks ?? []);
+}
+
+function drawHands(ctx, w, h, hands) {
   if (!hands.length) return;
 
-  const palette = ["#7c5cff", "#34d399"];
+  const palette = ["#7c3aed", "#14b8a6"];
 
   hands.forEach((landmarks, handIndex) => {
     const color = palette[handIndex % palette.length];
@@ -221,4 +248,35 @@ function drawHands(canvas, video, hands) {
       ctx.fill();
     }
   });
+}
+
+function drawPose(ctx, w, h, pose) {
+  if (!pose?.length) return;
+
+  ctx.strokeStyle = "#7c3aed";
+  ctx.lineWidth = Math.max(2, Math.min(w, h) * 0.004);
+  ctx.lineCap = "round";
+  for (const [a, b] of POSE_CONNECTIONS) {
+    const pa = pose[a];
+    const pb = pose[b];
+    if (!pa || !pb || (pa.visibility ?? 1) < 0.35 || (pb.visibility ?? 1) < 0.35) continue;
+    ctx.beginPath();
+    ctx.moveTo(pa.x * w, pa.y * h);
+    ctx.lineTo(pb.x * w, pb.y * h);
+    ctx.stroke();
+  }
+}
+
+function drawFaceAnchors(ctx, w, h, face) {
+  if (!face?.length) return;
+
+  ctx.fillStyle = "#14b8a6";
+  const r = Math.max(2, Math.min(w, h) * 0.004);
+  for (const idx of FACE_ANCHORS) {
+    const lm = face[idx];
+    if (!lm) continue;
+    ctx.beginPath();
+    ctx.arc(lm.x * w, lm.y * h, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }

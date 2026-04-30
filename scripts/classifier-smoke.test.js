@@ -59,6 +59,27 @@ function translated(points, dx) {
   return points.map((p) => point(p.x + dx, p.y, p.z ?? 0));
 }
 
+function makeFace({ mouth = point(0, 0), chin = mouth } = {}) {
+  const face = Array.from({ length: 455 }, () => point(mouth.x, mouth.y));
+  face[1] = point(mouth.x, mouth.y - 0.12);
+  face[10] = point(mouth.x, mouth.y - 0.28);
+  face[13] = point(mouth.x, mouth.y - 0.02);
+  face[14] = point(mouth.x, mouth.y + 0.02);
+  face[152] = chin;
+  face[234] = point(mouth.x - 0.14, mouth.y);
+  face[454] = point(mouth.x + 0.14, mouth.y);
+  return face;
+}
+
+function makePose({ chest = point(0, 0.5), scale = 0.8 } = {}) {
+  const pose = Array.from({ length: 33 }, () => point(chest.x, chest.y, 0));
+  pose[11] = point(chest.x - scale / 2, chest.y - 0.2);
+  pose[12] = point(chest.x + scale / 2, chest.y - 0.2);
+  pose[23] = point(chest.x - scale / 3, chest.y + 0.2);
+  pose[24] = point(chest.x + scale / 3, chest.y + 0.2);
+  return pose;
+}
+
 function setFinger(landmarks, finger, pose) {
   const spec = FINGERS[finger];
   const spread = typeof pose === "object" ? pose.spread ?? 0 : 0;
@@ -171,4 +192,15 @@ resetClassifierState();
 const frameFallback = classifyFrame([fixtures[0].hand]);
 assert.equal(frameFallback?.sign, "B", `single-hand frame classified as ${frameFallback?.sign ?? "null"}`);
 
-console.log(`Classifier smoke test passed: ${fixtures.length + 28} assertions`);
+const foodHand = makeHand();
+foodHand[THUMB_TIP] = point(-0.25, 0.02);
+const foodFocus = point(-0.15, 0.26);
+const food = classifyFrame([foodHand], { faceLandmarks: [makeFace({ mouth: foodFocus })] });
+assert.equal(food?.sign, "Food", `face-context O hand classified as ${food?.sign ?? "null"}`);
+
+resetClassifierState();
+const meHand = makeHand({ fingers: { index: "up" } });
+const me = classifyFrame([meHand], { poseLandmarks: [makePose({ chest: point(-0.1, 0.35) })] });
+assert.equal(me?.sign, "Me", `body-context pointing hand classified as ${me?.sign ?? "null"}`);
+
+console.log(`Classifier smoke test passed: ${fixtures.length + 30} assertions`);

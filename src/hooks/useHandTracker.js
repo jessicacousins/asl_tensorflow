@@ -1,39 +1,74 @@
 import { useEffect, useRef, useState } from "react";
-import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
+import {
+  FaceLandmarker,
+  FilesetResolver,
+  HandLandmarker,
+  PoseLandmarker,
+} from "@mediapipe/tasks-vision";
 
 const WASM_URL =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-const MODEL_URL =
+const HAND_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const POSE_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task";
 
-let landmarkerPromise = null;
+let trackersPromise = null;
 
 /**
- * Lazily build (and cache across the whole session) one HandLandmarker
- * instance. The model file is ~6MB, so we never want to fetch it twice.
+ * Lazily build and cache the vision stack. Hand landmarks identify
+ * handshape; face and pose landmarks give ASL signs the location context
+ * that a hand-only classifier cannot infer.
  */
-function getLandmarker() {
-  if (!landmarkerPromise) {
-    landmarkerPromise = (async () => {
+function getTrackers() {
+  if (!trackersPromise) {
+    trackersPromise = (async () => {
       const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
-      return HandLandmarker.createFromOptions(fileset, {
-        baseOptions: {
-          modelAssetPath: MODEL_URL,
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numHands: 2,
-        minHandDetectionConfidence: 0.5,
-        minHandPresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+      const [hands, face, pose] = await Promise.all([
+        HandLandmarker.createFromOptions(fileset, {
+          baseOptions: {
+            modelAssetPath: HAND_MODEL_URL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numHands: 2,
+          minHandDetectionConfidence: 0.5,
+          minHandPresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        }),
+        FaceLandmarker.createFromOptions(fileset, {
+          baseOptions: {
+            modelAssetPath: FACE_MODEL_URL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.5,
+          minFacePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        }),
+        PoseLandmarker.createFromOptions(fileset, {
+          baseOptions: {
+            modelAssetPath: POSE_MODEL_URL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        }),
+      ]);
+      return { hands, face, pose };
     })().catch((err) => {
       // Allow a retry on next mount if the first attempt failed.
-      landmarkerPromise = null;
+      trackersPromise = null;
       throw err;
     });
   }
-  return landmarkerPromise;
+  return trackersPromise;
 }
 
 /**
@@ -58,12 +93,12 @@ export function useHandTracker({ videoRef, enabled, onResult }) {
     if (!enabled) return undefined;
 
     let cancelled = false;
-    let landmarker = null;
+    let trackers = null;
 
     (async () => {
       try {
         setStatus("loading");
-        landmarker = await getLandmarker();
+        trackers = await getTrackers();
         if (cancelled) return;
         setStatus("ready");
 
@@ -77,15 +112,24 @@ export function useHandTracker({ videoRef, enabled, onResult }) {
           lastVideoTimeRef.current = video.currentTime;
 
           try {
-            const result = landmarker.detectForVideo(video, performance.now());
-            callbackRef.current?.(result);
+            const now = performance.now();
+            const handResult = trackers.hands.detectForVideo(video, now);
+            const faceResult = trackers.face.detectForVideo(video, now);
+            const poseResult = trackers.pose.detectForVideo(video, now);
+            callbackRef.current?.({
+              ...handResult,
+              faceLandmarks: faceResult.faceLandmarks ?? [],
+              faceBlendshapes: faceResult.faceBlendshapes ?? [],
+              poseLandmarks: poseResult.landmarks ?? [],
+              poseWorldLandmarks: poseResult.worldLandmarks ?? [],
+            });
           } catch (err) {
-            console.error("HandLandmarker detection error:", err);
+            console.error("Vision tracker detection error:", err);
           }
         };
         loop();
       } catch (err) {
-        console.error("Failed to initialise HandLandmarker:", err);
+        console.error("Failed to initialise vision trackers:", err);
         if (!cancelled) {
           setError(err);
           setStatus("error");

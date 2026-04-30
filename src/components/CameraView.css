@@ -68,7 +68,14 @@
   }
 }
 
-.hand-count {
+.tracking-counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.tracking-counts span {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
@@ -113,13 +120,15 @@
   padding: 24px;
   gap: 8px;
   background:
-    radial-gradient(circle at 50% 40%, rgba(124, 92, 255, 0.18), transparent 60%),
+    radial-gradient(circle at 50% 40%, var(--accent-soft), transparent 60%),
     var(--bg-2);
   color: var(--text);
 }
 
 .placeholder-icon {
-  font-size: 38px;
+  width: 68px;
+  height: 68px;
+  color: var(--accent);
   margin-bottom: 4px;
 }
 

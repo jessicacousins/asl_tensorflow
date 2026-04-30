@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./PracticeMode.css";
 import { SIGN_LIBRARY, SIGN_BY_KEY } from "../lib/signLibrary.js";
+import SignIcon from "./SignIcon.jsx";
 
 const HOLD_MS = 800; // how long the correct sign must be held to score it
 
@@ -32,9 +33,16 @@ const PRACTICE_SETS = [
       "Thank You",
       "Please",
       "Home",
+      "Food",
+      "Water",
+      "Drink",
+      "Bathroom",
       "Yes",
       "No",
       "Unsure",
+      "Me",
+      "You",
+      "Need",
       "I Love You",
     ],
   },
@@ -153,8 +161,8 @@ export default function PracticeMode({ livePrediction, cameraOn }) {
       </div>
 
       <div className={`target-card target-${feedback}`}>
-        <div className="target-emoji" aria-hidden="true">
-          {meta.emoji}
+        <div className="target-icon" aria-hidden="true">
+          <SignIcon sign={meta.sign} size="lg" />
         </div>
         <div className="target-body">
           <span className="target-label">Sign</span>
@@ -180,8 +188,15 @@ function FeedbackBadge({ state, cameraOn, live }) {
   if (!cameraOn) {
     return <span className="feedback off">Turn on the camera to start</span>;
   }
-  if (state === "correct") return <span className="feedback ok">✓ Nice!</span>;
-  if (state === "hold") return <span className="feedback hold">Hold it…</span>;
+  if (state === "correct") {
+    return (
+      <span className="feedback ok">
+        <SignIcon type="check" size="sm" />
+        Nice
+      </span>
+    );
+  }
+  if (state === "hold") return <span className="feedback hold">Hold it...</span>;
   return (
     <span className="feedback idle">
       {live ? `Seeing ${live.label}` : "Show me the sign"}

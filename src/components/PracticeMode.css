@@ -86,9 +86,12 @@
   border-color: color-mix(in srgb, var(--warning) 40%, transparent);
 }
 
-.target-emoji {
-  font-size: 56px;
-  line-height: 1;
+.target-icon {
+  width: 72px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .target-body {
@@ -114,6 +117,9 @@
 }
 
 .feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
   padding: 6px 12px;
   border-radius: 999px;

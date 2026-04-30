@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import "./LearnMode.css";
 import { SIGN_LIBRARY } from "../lib/signLibrary.js";
+import SignIcon from "./SignIcon.jsx";
 
-const CATEGORIES = ["All", "Phrase", "Letter", "Number"];
+const CATEGORIES = ["All", "Phrase", "Letter"];
 
 export default function LearnMode() {
   const [filter, setFilter] = useState("All");
@@ -26,7 +27,7 @@ export default function LearnMode() {
         <div>
           <h2>Sign library</h2>
           <p className="panel-sub">
-            Every sign SignBridge can recognise, with a description of the
+            Every sign JC-Signs can recognise, with a description of the
             handshape. Use this to learn what to try in Practice or Translate.
           </p>
         </div>
@@ -36,7 +37,7 @@ export default function LearnMode() {
         <input
           type="search"
           className="search-input"
-          placeholder="Search signs…"
+          placeholder="Search signs..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -58,8 +59,8 @@ export default function LearnMode() {
         {items.map((s) => (
           <li key={s.sign} className="sign-card fade-in">
             <div className="sign-card-head">
-              <span className="sign-card-emoji" aria-hidden="true">
-                {s.emoji}
+              <span className="sign-card-icon" aria-hidden="true">
+                <SignIcon sign={s.sign} size="md" />
               </span>
               <div>
                 <h3 className="sign-card-name">{s.sign}</h3>
@@ -76,9 +77,8 @@ export default function LearnMode() {
       </ul>
 
       <div className="learn-footnote">
-        Static handshapes only — letters that need motion (J, Z) and ones that
-        look identical from a single frame (M, N, S, T, X) aren't recognised
-        yet, so they're not in the library.
+        Face and body tracking are used for location-based signs. J, Z, Yes,
+        Home, Please, and Thank You use short motion checks.
       </div>
     </div>
   );
