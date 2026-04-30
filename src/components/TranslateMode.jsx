@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./TranslateMode.css";
 import { useSpeech } from "../hooks/useSpeech.js";
 
-const SPACE_GAP_MS = 1800; // a pause this long inserts a space between letters
+const SPACE_GAP_MS = 1500; // a pause this long inserts a space between letters
 
 export default function TranslateMode({ committedSign, livePrediction, cameraOn }) {
   const [tokens, setTokens] = useState([]); // ordered list of committed signs

@@ -5,7 +5,7 @@ import CameraView from "./components/CameraView.jsx";
 import TranslateMode from "./components/TranslateMode.jsx";
 import PracticeMode from "./components/PracticeMode.jsx";
 import LearnMode from "./components/LearnMode.jsx";
-import { classifyHand } from "./lib/aslClassifier.js";
+import { classifyFrame, resetClassifierState } from "./lib/aslClassifier.js";
 import { createStabilityBuffer } from "./lib/stability.js";
 
 const MODES = [
@@ -40,6 +40,7 @@ export default function App() {
   // modes — old detections from a different context aren't useful.
   useEffect(() => {
     stabilityRef.current.reset();
+    resetClassifierState();
     setLivePrediction(null);
     setCommittedSign(null);
   }, [cameraOn, mode]);
@@ -55,10 +56,9 @@ export default function App() {
       return;
     }
 
-    // We only classify the first detected hand. Two-handed signs would need
-    // their own pipeline; for fingerspelling and the alphabet, one hand is
-    // exactly what ASL uses.
-    const prediction = classifyHand(hands[0]);
+    // classifyFrame checks two-handed signs (Heart, More) when both hands
+    // are visible, and falls back to the first hand for fingerspelling.
+    const prediction = classifyFrame(hands);
     setLivePrediction(prediction);
 
     const committed = stabilityRef.current.tick(prediction?.sign ?? null);

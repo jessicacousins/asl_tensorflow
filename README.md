@@ -12,23 +12,22 @@ Everything runs locally in your browser. Nothing is uploaded.
 
 ## Recognised signs
 
-Static handshapes only (no temporal model required):
+- **Letters:** A-Z. J and Z use short motion tracking; the rest are single-hand landmark shapes.
+- **Everyday phrases:** Hello, Thank You, Please, Home, Yes, No, Unsure, Help, Please Help Me, More, I Love You.
+- **Two-hand shortcuts:** Help, Please Help Me, More, and Unsure use two visible hands when possible.
 
-- **Letters:** A, B, C, D, E, F, I, L, O, R, U, V, W, Y
-- **Numbers:** 1, 3, 5
-- **Phrases:** Hello, I Love You
+Some ASL signs depend on face/body location or motion that MediaPipe Hands cannot see. For those, SignBridge uses practical hand-shape and motion shortcuts while keeping letter recognition stricter so A and I Love You do not dominate nearby signs.
 
-Letters that need motion (J, Z) and ones that look identical from a single frame (M, N, S, T, X) are intentionally excluded so they don't fire false positives.
+## Why it works
 
-## Why it actually works now
-
-The previous build used the older `@tensorflow-models/handpose` library and mixed two different landmark conventions in the same file, which is why only "Hello" was firing. SignBridge uses the modern `@mediapipe/tasks-vision` HandLandmarker (21 normalised landmarks per hand), an angle-based finger-extension test that's orientation-independent, and a stability buffer so the script only commits a sign once you've held it.
+SignBridge uses the modern `@mediapipe/tasks-vision` HandLandmarker (21 normalised landmarks per hand), a geometric classifier for ASL handshapes, a small motion buffer for J/Z and phrase shortcuts, and a stability buffer so the script only commits a sign once you've held it.
 
 ## Run it
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
+npm run test:smoke
 npm run build    # production bundle in /dist
 npm run preview  # serve the production build
 ```

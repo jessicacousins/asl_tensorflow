@@ -1,5 +1,6 @@
 import {
   WRIST,
+  THUMB_CMC,
   THUMB_MCP,
   THUMB_IP,
   THUMB_TIP,
@@ -17,204 +18,514 @@ import {
   PINKY_TIP,
 } from "./landmarks.js";
 
-// All math here works on MediaPipe HandLandmarker landmarks: arrays of
-// 21 objects with normalized {x, y, z} in the [0,1] range. Because the values
-// are normalized we can use the same thresholds across any camera resolution.
-
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-
-// Hand "scale" — distance from the wrist to the middle-finger MCP. Used to
-// turn raw distances into ratios that don't depend on how close the hand is
-// to the camera.
+const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
 const handScale = (lm) => dist(lm[WRIST], lm[MIDDLE_MCP]) || 1e-6;
 
-// A finger is "extended" when the angle at its PIP joint is close to 180°.
-// The cosine of that angle is the dot product of the vectors PIP->MCP and
-// PIP->TIP, divided by their magnitudes. cos ≈ -1 means straight, cos ≈ 1
-// means fully bent. This works regardless of hand orientation.
-function angleCos(lm, mcp, pip, tip) {
-  const ax = lm[mcp].x - lm[pip].x;
-  const ay = lm[mcp].y - lm[pip].y;
-  const bx = lm[tip].x - lm[pip].x;
-  const by = lm[tip].y - lm[pip].y;
-  const mag = Math.hypot(ax, ay) * Math.hypot(bx, by);
+function angleCos(lm, a, b, c) {
+  const ax = lm[a].x - lm[b].x;
+  const ay = lm[a].y - lm[b].y;
+  const cx = lm[c].x - lm[b].x;
+  const cy = lm[c].y - lm[b].y;
+  const mag = Math.hypot(ax, ay) * Math.hypot(cx, cy);
   if (mag < 1e-9) return 1;
-  return (ax * bx + ay * by) / mag;
+  return (ax * cx + ay * cy) / mag;
 }
 
-const isExtended = (lm, mcp, pip, tip) => angleCos(lm, mcp, pip, tip) < -0.55;
-
-// The thumb bends sideways rather than curling, so we need slightly looser
-// criteria and we measure the angle at the IP joint.
-function thumbExtended(lm) {
-  const c = angleCos(lm, THUMB_MCP, THUMB_IP, THUMB_TIP);
-  return c < -0.4;
+function jointExtension(lm, mcp, pip, tip) {
+  return clamp((1 - angleCos(lm, mcp, pip, tip)) / 2);
 }
 
-// Snapshot of which fingers are currently up.
-function fingersState(lm) {
+function thumbExtension(lm) {
+  return clamp((1 - angleCos(lm, THUMB_CMC, THUMB_MCP, THUMB_IP)) / 2);
+}
+
+function softUp(v) {
+  if (v >= 0.74) return 1;
+  if (v <= 0.46) return 0;
+  return (v - 0.46) / 0.28;
+}
+
+function softDown(v) {
+  if (v <= 0.34) return 1;
+  if (v >= 0.62) return 0;
+  return (0.62 - v) / 0.28;
+}
+
+function softMid(v, target = 0.52, halfWidth = 0.24) {
+  const d = Math.abs(v - target);
+  if (d <= halfWidth * 0.35) return 1;
+  if (d >= halfWidth) return 0;
+  return 1 - (d - halfWidth * 0.35) / (halfWidth * 0.65);
+}
+
+function inRange(v, low, high, fade = 0.06) {
+  if (v < low - fade || v > high + fade) return 0;
+  if (v < low) return (v - low + fade) / fade;
+  if (v > high) return (high + fade - v) / fade;
+  return 1;
+}
+
+function greaterThan(v, target, fade = 0.08) {
+  if (v >= target) return 1;
+  if (v <= target - fade) return 0;
+  return (v - target + fade) / fade;
+}
+
+function lessThan(v, target, fade = 0.08) {
+  if (v <= target) return 1;
+  if (v >= target + fade) return 0;
+  return (target + fade - v) / fade;
+}
+
+function geo(values) {
+  if (!values.length) return 0;
+  return Math.pow(values.reduce((acc, v) => acc * clamp(v), 1), 1 / values.length);
+}
+
+function fingers(f, wanted) {
+  const e = f.ext;
+  return geo(
+    Object.entries(wanted).map(([finger, state]) => {
+      if (state === "up") return softUp(e[finger]);
+      if (state === "down") return softDown(e[finger]);
+      if (state === "mid") return softMid(e[finger]);
+      return 1;
+    }),
+  );
+}
+
+function getFeatures(lm) {
+  const scale = handScale(lm);
+  const d = (a, b) => dist(lm[a], lm[b]) / scale;
+  const dy = (a, b) => (lm[a].y - lm[b].y) / scale;
+  const dx = (a, b) => (lm[a].x - lm[b].x) / scale;
+  const absDx = (a, b) => Math.abs(dx(a, b));
+  const absDy = (a, b) => Math.abs(dy(a, b));
+
+  const ext = {
+    thumb: thumbExtension(lm),
+    index: jointExtension(lm, INDEX_MCP, INDEX_PIP, INDEX_TIP),
+    middle: jointExtension(lm, MIDDLE_MCP, MIDDLE_PIP, MIDDLE_TIP),
+    ring: jointExtension(lm, RING_MCP, RING_PIP, RING_TIP),
+    pinky: jointExtension(lm, PINKY_MCP, PINKY_PIP, PINKY_TIP),
+  };
+
   return {
-    thumb: thumbExtended(lm),
-    index: isExtended(lm, INDEX_MCP, INDEX_PIP, INDEX_TIP),
-    middle: isExtended(lm, MIDDLE_MCP, MIDDLE_PIP, MIDDLE_TIP),
-    ring: isExtended(lm, RING_MCP, RING_PIP, RING_TIP),
-    pinky: isExtended(lm, PINKY_MCP, PINKY_PIP, PINKY_TIP),
+    lm,
+    ext,
+    scale,
+    thumbIndex: d(THUMB_TIP, INDEX_TIP),
+    thumbMiddle: d(THUMB_TIP, MIDDLE_TIP),
+    thumbRing: d(THUMB_TIP, RING_TIP),
+    thumbPinky: d(THUMB_TIP, PINKY_TIP),
+    indexMiddleSpread: d(INDEX_TIP, MIDDLE_TIP),
+    middleRingSpread: d(MIDDLE_TIP, RING_TIP),
+    ringPinkySpread: d(RING_TIP, PINKY_TIP),
+    indexTipToMcp: d(INDEX_TIP, INDEX_MCP),
+    middleTipToMcp: d(MIDDLE_TIP, MIDDLE_MCP),
+    thumbAcrossPalm: d(THUMB_TIP, PINKY_MCP),
+    indexVertical: absDy(INDEX_TIP, INDEX_MCP),
+    indexHorizontal: absDx(INDEX_TIP, INDEX_MCP),
+    middleVertical: absDy(MIDDLE_TIP, MIDDLE_MCP),
+    middleHorizontal: absDx(MIDDLE_TIP, MIDDLE_MCP),
+    ringVertical: absDy(RING_TIP, RING_MCP),
+    indexAboveMcp: -dy(INDEX_TIP, INDEX_MCP),
+    middleAboveMcp: -dy(MIDDLE_TIP, MIDDLE_MCP),
+    pinkyAboveMcp: -dy(PINKY_TIP, PINKY_MCP),
   };
 }
 
-const countUp = (f) =>
-  Number(f.thumb) +
-  Number(f.index) +
-  Number(f.middle) +
-  Number(f.ring) +
-  Number(f.pinky);
+const openPalm = (f) =>
+  fingers(f, { thumb: "up", index: "up", middle: "up", ring: "up", pinky: "up" });
 
-/**
- * Classify a single hand into an ASL letter or common phrase.
- * Returns { sign, label, confidence } or null when no confident match.
- *
- * Recognises the static handshapes of the ASL alphabet (A B C D E F I L O R U V W Y),
- * the digits 1-5, and the popular "I Love You" combined sign. Letters that
- * require motion (J, Z) or that look identical to other letters from a single
- * frame (M, N, S, T, X) are intentionally omitted to avoid false positives.
- */
-export function classifyHand(landmarks) {
-  if (!landmarks || landmarks.length < 21) return null;
+const closedFist = (f) =>
+  fingers(f, { index: "down", middle: "down", ring: "down", pinky: "down" });
 
-  const lm = landmarks;
-  const f = fingersState(lm);
-  const scale = handScale(lm);
-  const up = countUp(f);
+const twoUp = (f) =>
+  fingers(f, { thumb: "down", index: "up", middle: "up", ring: "down", pinky: "down" });
 
-  // Convenience normalised distances
-  const d = (a, b) => dist(lm[a], lm[b]) / scale;
-  const thumbIndex = d(THUMB_TIP, INDEX_TIP);
-  const thumbMiddle = d(THUMB_TIP, MIDDLE_TIP);
-  const indexMiddleSpread = d(INDEX_TIP, MIDDLE_TIP);
-  const middleRingSpread = d(MIDDLE_TIP, RING_TIP);
+const SCORERS = {
+  A: (f) =>
+    closedFist(f) *
+    softUp(f.ext.thumb) *
+    greaterThan(f.thumbIndex, 0.38, 0.12) *
+    greaterThan(f.thumbPinky, 0.35, 0.12),
 
-  // ───── COMBINED / PHRASE SIGNS (most specific first) ────────────────────
+  B: (f) =>
+    fingers(f, { thumb: "down", index: "up", middle: "up", ring: "up", pinky: "up" }) *
+    lessThan(f.thumbAcrossPalm, 1.2, 0.2),
 
-  // I Love You — thumb + index + pinky out, middle + ring tucked
-  if (f.thumb && f.index && !f.middle && !f.ring && f.pinky) {
-    return { sign: "I Love You", label: "I Love You ❤️", confidence: 0.92 };
+  C: (f) =>
+    fingers(f, { thumb: "mid", index: "mid", middle: "mid", ring: "mid", pinky: "mid" }) *
+    inRange(f.thumbIndex, 0.55, 1.3, 0.16),
+
+  D: (f) =>
+    fingers(f, { index: "up", middle: "down", ring: "down", pinky: "down" }) *
+    lessThan(f.thumbMiddle, 0.42, 0.1) *
+    greaterThan(f.indexAboveMcp, 0.6, 0.16),
+
+  E: (f) =>
+    closedFist(f) *
+    softDown(f.ext.thumb) *
+    lessThan(Math.min(f.thumbIndex, f.thumbMiddle), 0.55, 0.12),
+
+  F: (f) =>
+    fingers(f, { index: "down", middle: "up", ring: "up", pinky: "up" }) *
+    lessThan(f.thumbIndex, 0.42, 0.1),
+
+  G: (f) =>
+    fingers(f, { index: "up", middle: "down", ring: "down", pinky: "down" }) *
+    softUp(f.ext.thumb) *
+    greaterThan(f.indexHorizontal, f.indexVertical + 0.15, 0.15),
+
+  H: (f) =>
+    twoUp(f) *
+    lessThan(f.indexMiddleSpread, 0.28, 0.08) *
+    greaterThan(f.indexHorizontal + f.middleHorizontal, f.indexVertical + f.middleVertical + 0.2, 0.18),
+
+  I: (f) =>
+    fingers(f, { thumb: "down", index: "down", middle: "down", ring: "down", pinky: "up" }) *
+    greaterThan(f.pinkyAboveMcp, 0.45, 0.16),
+
+  K: (f) =>
+    twoUp(f) *
+    inRange(f.indexMiddleSpread, 0.22, 0.75, 0.08) *
+    lessThan(f.thumbMiddle, 0.75, 0.12) *
+    greaterThan(f.indexAboveMcp + f.middleAboveMcp, 1.0, 0.2),
+
+  L: (f) =>
+    fingers(f, { thumb: "up", index: "up", middle: "down", ring: "down", pinky: "down" }) *
+    greaterThan(f.thumbIndex, 0.75, 0.14) *
+    greaterThan(f.indexAboveMcp, 0.45, 0.14),
+
+  M: (f) =>
+    closedFist(f) *
+    softDown(f.ext.thumb) *
+    lessThan(f.thumbRing, 0.55, 0.12) *
+    greaterThan(f.thumbIndex, 0.25, 0.08),
+
+  N: (f) =>
+    closedFist(f) *
+    softDown(f.ext.thumb) *
+    lessThan(f.thumbMiddle, 0.55, 0.12) *
+    greaterThan(f.thumbRing, 0.36, 0.1),
+
+  O: (f) =>
+    closedFist(f) *
+    inRange(Math.min(f.thumbIndex, f.thumbMiddle), 0, 0.5, 0.12),
+
+  P: (f) =>
+    twoUp(f) *
+    inRange(f.indexMiddleSpread, 0.22, 0.78, 0.08) *
+    lessThan(f.indexAboveMcp + f.middleAboveMcp, 0.2, 0.2),
+
+  Q: (f) =>
+    fingers(f, { thumb: "up", index: "up", middle: "down", ring: "down", pinky: "down" }) *
+    greaterThan(f.indexHorizontal, f.indexVertical + 0.1, 0.16) *
+    lessThan(f.indexAboveMcp, 0.15, 0.18),
+
+  R: (f) =>
+    twoUp(f) *
+    lessThan(f.indexMiddleSpread, 0.12, 0.05) *
+    greaterThan(f.indexAboveMcp + f.middleAboveMcp, 0.85, 0.2),
+
+  S: (f) =>
+    closedFist(f) *
+    softDown(f.ext.thumb) *
+    greaterThan(Math.min(f.thumbIndex, f.thumbMiddle), 0.5, 0.12),
+
+  T: (f) =>
+    closedFist(f) *
+    inRange(f.thumbIndex, 0.2, 0.55, 0.1) *
+    greaterThan(f.thumbMiddle, 0.25, 0.08),
+
+  U: (f) =>
+    twoUp(f) *
+    lessThan(f.indexMiddleSpread, 0.24, 0.07) *
+    greaterThan(f.indexAboveMcp + f.middleAboveMcp, 1.0, 0.18),
+
+  V: (f) =>
+    twoUp(f) *
+    greaterThan(f.indexMiddleSpread, 0.32, 0.08) *
+    greaterThan(f.indexAboveMcp + f.middleAboveMcp, 1.0, 0.18),
+
+  W: (f) =>
+    fingers(f, { thumb: "down", index: "up", middle: "up", ring: "up", pinky: "down" }) *
+    greaterThan(f.indexMiddleSpread + f.middleRingSpread, 0.45, 0.12),
+
+  X: (f) =>
+    fingers(f, { index: "mid", middle: "down", ring: "down", pinky: "down" }) *
+    softDown(f.ext.thumb) *
+    inRange(f.indexTipToMcp, 0.35, 0.9, 0.12),
+
+  Y: (f) =>
+    fingers(f, { thumb: "up", index: "down", middle: "down", ring: "down", pinky: "up" }) *
+    greaterThan(f.thumbPinky, 0.9, 0.16),
+
+  Hello: (f) => openPalm(f),
+  No: (f) =>
+    fingers(f, { thumb: "up", index: "up", middle: "up", ring: "down", pinky: "down" }) *
+    lessThan(f.thumbIndex, 0.8, 0.16),
+  "I Love You": (f) =>
+    fingers(f, { thumb: "up", index: "up", middle: "down", ring: "down", pinky: "up" }) *
+    greaterThan(f.thumbIndex, 0.72, 0.14) *
+    greaterThan(f.thumbPinky, 0.85, 0.14) *
+    greaterThan(f.indexAboveMcp, 0.45, 0.14),
+};
+
+export const LABELS = {
+  A: "A",
+  B: "B",
+  C: "C",
+  D: "D",
+  E: "E",
+  F: "F",
+  G: "G",
+  H: "H",
+  I: "I",
+  J: "J",
+  K: "K",
+  L: "L",
+  M: "M",
+  N: "N",
+  O: "O",
+  P: "P",
+  Q: "Q",
+  R: "R",
+  S: "S",
+  T: "T",
+  U: "U",
+  V: "V",
+  W: "W",
+  X: "X",
+  Y: "Y",
+  Z: "Z",
+  Hello: "Hello",
+  "Thank You": "Thank You",
+  Please: "Please",
+  Home: "Home",
+  Yes: "Yes",
+  No: "No",
+  Unsure: "Unsure",
+  Help: "Help",
+  "Please Help Me": "Please Help Me",
+  More: "More",
+  "I Love You": "I Love You",
+};
+
+const LETTERS = new Set("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
+const PHRASE_IDS = new Set([
+  "Hello",
+  "Thank You",
+  "Please",
+  "Home",
+  "No",
+  "Unsure",
+  "I Love You",
+]);
+
+const MIN_SCORE = 0.72;
+const PHRASE_MIN_SCORE = 0.86;
+const MARGIN = 0.08;
+
+let motionHistory = [];
+let lastFrameAt = 0;
+
+function rememberMotion(handsLandmarks, staticSign) {
+  const now = performance.now();
+  if (!handsLandmarks?.length || now - lastFrameAt > 600) motionHistory = [];
+  lastFrameAt = now;
+
+  const hand = handsLandmarks?.[0];
+  if (!hand) return;
+  motionHistory.push({
+    at: now,
+    staticSign,
+    wrist: hand[WRIST],
+    index: hand[INDEX_TIP],
+    thumb: hand[THUMB_TIP],
+    pinky: hand[PINKY_TIP],
+  });
+  motionHistory = motionHistory.filter((p) => now - p.at <= 900).slice(-24);
+}
+
+function span(points, axis) {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const p of points) {
+    lo = Math.min(lo, p[axis]);
+    hi = Math.max(hi, p[axis]);
   }
+  return hi - lo;
+}
 
-  // ───── FIVE FINGERS UP ──────────────────────────────────────────────────
+function directionReversals(points, axis) {
+  let reversals = 0;
+  let lastDir = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const dir = Math.sign(points[i][axis] - points[i - 1][axis]);
+    if (dir && lastDir && dir !== lastDir) reversals += 1;
+    if (dir) lastDir = dir;
+  }
+  return reversals;
+}
 
-  if (up === 5) {
-    // Hello / open wave when fingers are spread; a tight palm reads as B/5
-    if (indexMiddleSpread > 0.45) {
-      return { sign: "Hello", label: "Hello / 5", confidence: 0.9 };
+function classifyMotion() {
+  if (motionHistory.length < 6) return null;
+  const recent = motionHistory;
+
+  const iFrames = recent.filter((p) => p.staticSign === "I");
+  if (iFrames.length >= 5) {
+    const first = iFrames[0].pinky;
+    const last = iFrames[iFrames.length - 1].pinky;
+    const dx = Math.abs(last.x - first.x);
+    const dy = last.y - first.y;
+    if (dx > 0.035 && dy > 0.045) {
+      return { sign: "J", label: LABELS.J, confidence: 0.9 };
     }
-    return { sign: "5", label: "5 / Open Hand", confidence: 0.85 };
   }
 
-  // ───── FOUR FINGERS UP ──────────────────────────────────────────────────
-
-  // B — four fingers up together, thumb folded across the palm
-  if (!f.thumb && f.index && f.middle && f.ring && f.pinky) {
-    return { sign: "B", label: "B / 4", confidence: 0.9 };
-  }
-
-  // F — index curls down to touch the thumb, the other three fingers stay up
-  if (f.thumb && !f.index && f.middle && f.ring && f.pinky && thumbIndex < 0.55) {
-    return { sign: "F", label: "F", confidence: 0.85 };
-  }
-
-  // ───── THREE FINGERS UP ─────────────────────────────────────────────────
-
-  // W — index, middle, ring up; thumb and pinky tucked
-  if (!f.thumb && f.index && f.middle && f.ring && !f.pinky) {
-    return { sign: "W", label: "W / 3", confidence: 0.88 };
-  }
-
-  // 3 (alternative) — thumb, index, middle up
-  if (f.thumb && f.index && f.middle && !f.ring && !f.pinky) {
-    if (thumbIndex > 0.6) {
-      return { sign: "3", label: "3", confidence: 0.78 };
+  const sFrames = recent.filter((p) => p.staticSign === "S");
+  if (sFrames.length >= 6) {
+    const wrists = sFrames.map((p) => p.wrist);
+    if (span(wrists, "y") > 0.035 && directionReversals(wrists, "y") >= 1) {
+      return { sign: "Yes", label: LABELS.Yes, confidence: 0.88 };
     }
   }
 
-  // ───── TWO FINGERS UP ───────────────────────────────────────────────────
-
-  // V vs U — both have index + middle up, thumb folded. V is spread, U is together.
-  if (!f.thumb && f.index && f.middle && !f.ring && !f.pinky) {
-    if (indexMiddleSpread > 0.45) {
-      return { sign: "V", label: "V / 2 / Peace", confidence: 0.88 };
-    }
-    return { sign: "U", label: "U", confidence: 0.82 };
-  }
-
-  // L — thumb + index extended at right angle, others curled
-  if (f.thumb && f.index && !f.middle && !f.ring && !f.pinky) {
-    if (thumbIndex > 0.9) {
-      return { sign: "L", label: "L", confidence: 0.88 };
+  const oFrames = recent.filter((p) => p.staticSign === "O");
+  if (oFrames.length >= 6) {
+    const thumbs = oFrames.map((p) => p.thumb);
+    if (span(thumbs, "x") + span(thumbs, "y") > 0.08) {
+      return { sign: "Home", label: LABELS.Home, confidence: 0.86 };
     }
   }
 
-  // Y — thumb + pinky out (the "hang loose" / call-me handshape)
-  if (f.thumb && !f.index && !f.middle && !f.ring && f.pinky) {
-    return { sign: "Y", label: "Y", confidence: 0.88 };
-  }
-
-  // R — index and middle crossed (very close together, both extended)
-  if (!f.thumb && f.index && f.middle && !f.ring && !f.pinky && indexMiddleSpread < 0.12) {
-    return { sign: "R", label: "R", confidence: 0.7 };
-  }
-
-  // ───── ONE FINGER UP ────────────────────────────────────────────────────
-
-  // D — index up, thumb meets middle finger, others curled
-  if (!f.thumb && f.index && !f.middle && !f.ring && !f.pinky) {
-    if (thumbMiddle < 0.6) {
-      return { sign: "D", label: "D", confidence: 0.82 };
+  const openFrames = recent.filter((p) => p.staticSign === "Hello");
+  if (openFrames.length >= 7) {
+    const wrists = openFrames.map((p) => p.wrist);
+    const indexes = openFrames.map((p) => p.index);
+    const xSpan = span(indexes, "x");
+    const ySpan = span(indexes, "y");
+    if (xSpan > 0.08 && ySpan > 0.04 && directionReversals(indexes, "x") >= 1) {
+      return { sign: "Please", label: LABELS.Please, confidence: 0.86 };
     }
-    return { sign: "1", label: "1 / Point", confidence: 0.82 };
-  }
-
-  // I — only the pinky is extended
-  if (!f.thumb && !f.index && !f.middle && !f.ring && f.pinky) {
-    return { sign: "I", label: "I", confidence: 0.88 };
-  }
-
-  // ───── NO FINGERS / FIST FAMILY ─────────────────────────────────────────
-
-  if (up === 0 || (up === 1 && f.thumb)) {
-    // O — fingers curled into a circle, thumb tip meets index tip
-    if (thumbIndex < 0.45 && thumbMiddle < 0.7) {
-      return { sign: "O", label: "O", confidence: 0.8 };
+    if (span(wrists, "y") > 0.07 && directionReversals(wrists, "y") === 0) {
+      return { sign: "Thank You", label: LABELS["Thank You"], confidence: 0.86 };
     }
-    // A — closed fist, thumb resting against the side of the index
-    if (f.thumb) {
-      return { sign: "A", label: "A / Yes", confidence: 0.78 };
-    }
-    // E — fully closed fist, thumb tucked across
-    return { sign: "E", label: "E / Fist", confidence: 0.72 };
   }
 
-  // ───── C SHAPE — partial curl ───────────────────────────────────────────
-
-  // The C handshape isn't fully open or fully closed: fingers are curved with
-  // the thumb mirroring them on the other side of an open arc. Our extension
-  // test reports them as "not extended" because the angle is bent ~90°, but
-  // the fingertips remain far from the palm.
-  const indexCurl = d(INDEX_TIP, INDEX_MCP);
-  const middleCurl = d(MIDDLE_TIP, MIDDLE_MCP);
-  if (
-    f.thumb &&
-    !f.index &&
-    !f.middle &&
-    indexCurl > 0.6 &&
-    middleCurl > 0.6 &&
-    thumbIndex > 0.6 &&
-    thumbIndex < 1.4
-  ) {
-    return { sign: "C", label: "C", confidence: 0.7 };
+  const pointFrames = recent.filter((p) => p.staticSign === "G" || p.staticSign === "Q" || p.staticSign === "D");
+  if (pointFrames.length >= 7) {
+    const indexes = pointFrames.map((p) => p.index);
+    if (directionReversals(indexes, "x") >= 2 && span(indexes, "x") > 0.08 && span(indexes, "y") > 0.035) {
+      return { sign: "Z", label: LABELS.Z, confidence: 0.88 };
+    }
   }
 
   return null;
 }
 
-// Exposed for debug overlays / Practice mode hints.
-export { fingersState, countUp };
+function bestOneHand(landmarks, { phrases = true } = {}) {
+  const features = getFeatures(landmarks);
+  let best = { sign: null, score: 0 };
+  let runnerUp = 0;
+
+  for (const [sign, scorer] of Object.entries(SCORERS)) {
+    if (!phrases && !LETTERS.has(sign)) continue;
+
+    const score = scorer(features);
+    const minScore = PHRASE_IDS.has(sign) ? PHRASE_MIN_SCORE : MIN_SCORE;
+    if (score < minScore) continue;
+
+    if (score > best.score) {
+      runnerUp = best.score;
+      best = { sign, score };
+    } else if (score > runnerUp) {
+      runnerUp = score;
+    }
+  }
+
+  if (!best.sign) return null;
+  if (best.score - runnerUp < MARGIN) return null;
+  return {
+    sign: best.sign,
+    label: LABELS[best.sign] ?? best.sign,
+    confidence: best.score,
+  };
+}
+
+export function classifyHand(landmarks, options) {
+  if (!landmarks || landmarks.length < 21) return null;
+  return bestOneHand(landmarks, options);
+}
+
+function classifyTwoHand(handsLandmarks) {
+  if (!handsLandmarks || handsLandmarks.length < 2) return null;
+  const [a, b] = handsLandmarks;
+  const fa = getFeatures(a);
+  const fb = getFeatures(b);
+  const sharedScale = (fa.scale + fb.scale) / 2;
+
+  const d = (ai, bi) => dist(a[ai], b[bi]) / sharedScale;
+  const wristsDist = d(WRIST, WRIST);
+  const indexDist = d(INDEX_TIP, INDEX_TIP);
+  const thumbDist = d(THUMB_TIP, THUMB_TIP);
+  const wristHeightGap = Math.abs(a[WRIST].y - b[WRIST].y) / sharedScale;
+
+  const bothOpen = openPalm(fa) > 0.86 && openPalm(fb) > 0.86;
+  const bothFist = closedFist(fa) > 0.82 && closedFist(fb) > 0.82;
+  const oneFistOneOpen = (closedFist(fa) > 0.82 && openPalm(fb) > 0.82) || (closedFist(fb) > 0.82 && openPalm(fa) > 0.82);
+
+  const bothL =
+    SCORERS.L(fa) > 0.78 &&
+    SCORERS.L(fb) > 0.78 &&
+    thumbDist < 0.75 &&
+    indexDist < 1.35 &&
+    wristsDist > 0.75;
+  if (bothL) return { sign: "I Love You", label: LABELS["I Love You"], confidence: 0.92 };
+
+  if (bothFist && indexDist < 0.6) {
+    return { sign: "More", label: LABELS.More, confidence: 0.88 };
+  }
+
+  if (oneFistOneOpen && wristsDist < 2.4) {
+    return { sign: "Help", label: LABELS.Help, confidence: 0.88 };
+  }
+
+  if (bothOpen && wristHeightGap > 0.45 && wristsDist < 2.8) {
+    return { sign: "Unsure", label: LABELS.Unsure, confidence: 0.86 };
+  }
+
+  if (bothOpen && wristsDist > 0.8 && wristsDist < 2.6) {
+    return { sign: "Please Help Me", label: LABELS["Please Help Me"], confidence: 0.86 };
+  }
+
+  return null;
+}
+
+export function classifyFrame(handsLandmarks) {
+  if (!handsLandmarks || handsLandmarks.length === 0) {
+    rememberMotion([], null);
+    return null;
+  }
+
+  if (handsLandmarks.length >= 2) {
+    const two = classifyTwoHand(handsLandmarks);
+    if (two) {
+      rememberMotion(handsLandmarks, two.sign);
+      return two;
+    }
+  }
+
+  const staticPrediction = classifyHand(handsLandmarks[0]);
+  rememberMotion(handsLandmarks, staticPrediction?.sign ?? null);
+  const motionPrediction = classifyMotion();
+  return motionPrediction ?? staticPrediction;
+}
+
+export function resetClassifierState() {
+  motionHistory = [];
+  lastFrameAt = 0;
+}

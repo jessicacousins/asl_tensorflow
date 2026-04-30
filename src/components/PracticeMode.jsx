@@ -7,23 +7,41 @@ const HOLD_MS = 800; // how long the correct sign must be held to score it
 const PRACTICE_SETS = [
   {
     id: "starter",
-    label: "Starter (5)",
-    signs: ["A", "B", "L", "Y", "Hello"],
+    label: "Starter",
+    signs: ["A", "B", "C", "L", "Y", "Hello", "Yes", "No"],
   },
   {
     id: "alphabet-basic",
-    label: "Easy letters (8)",
-    signs: ["A", "B", "C", "D", "I", "L", "O", "Y"],
+    label: "Easy letters",
+    signs: ["A", "B", "C", "D", "E", "F", "I", "L", "O", "S", "Y"],
   },
   {
     id: "alphabet-full",
-    label: "Static alphabet (13)",
-    signs: ["A", "B", "C", "D", "E", "F", "I", "L", "O", "R", "U", "V", "W", "Y"],
+    label: "Full alphabet",
+    signs: [
+      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+      "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+      "U", "V", "W", "X", "Y", "Z",
+    ],
   },
   {
     id: "phrases",
-    label: "Phrases (2)",
-    signs: ["Hello", "I Love You"],
+    label: "Phrases",
+    signs: [
+      "Hello",
+      "Thank You",
+      "Please",
+      "Home",
+      "Yes",
+      "No",
+      "Unsure",
+      "I Love You",
+    ],
+  },
+  {
+    id: "two-handed",
+    label: "Two-handed",
+    signs: ["Help", "Please Help Me", "More"],
   },
 ];
 

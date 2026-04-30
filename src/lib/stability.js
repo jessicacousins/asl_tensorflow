@@ -8,9 +8,9 @@
  * while the user is just holding their hand still.
  */
 export function createStabilityBuffer({
-  windowSize = 12,
-  requiredMatches = 8,
-  resetGapMs = 700,
+  windowSize = 10,
+  requiredMatches = 6,
+  resetGapMs = 600,
 } = {}) {
   /** @type {string[]} */
   const buf = [];
@@ -58,7 +58,7 @@ export function createStabilityBuffer({
     if (top === lastCommitted) {
       const noneFraction =
         buf.filter((s) => s === "__none__").length / buf.length;
-      if (noneFraction < 0.4 && sinceLastCommit < 1500) return null;
+      if (noneFraction < 0.4 && sinceLastCommit < 1200) return null;
     }
 
     lastCommitted = top;
